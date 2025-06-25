@@ -64,7 +64,7 @@ app = Dash(
 )
 
 # Expose Flask server for Gunicorn
-server = app.server
+server = app.server  # Ensure this line is present
 
 app.title = "Application Analytics Dashboard"
 
