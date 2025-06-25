@@ -105,6 +105,12 @@ def update_chart(selected_region, selected_month):
     return fig
 
 
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server  # <-- this is what Gunicorn uses
+
+# your layout + callbacks...
+
 if __name__ == '__main__':
-    # Run Dash app on port 8050 (default)
-    app.run(debug=True, port=8050)
+    port = int(os.environ.get("PORT", 8050))
+    app.run_server(debug=False, host="0.0.0.0", port=port)
+
