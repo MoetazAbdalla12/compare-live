@@ -9,8 +9,8 @@ import calendar
 def load_and_prepare_data(filepath, label):
     df = pd.read_excel(filepath)
     df['APPLICATION DATE'] = pd.to_datetime(df['APPLICATION DATE'], errors='coerce')
-    df = df.dropna(subset=['APPLICATION DATE', 'REGION', 'STATUS'])
-    df = df[df['STATUS'].str.strip().str.lower() == 'paid']
+    df = df.dropna(subset=['APPLICATION DATE', 'REGION', 'Status'])
+    df = df[df['Status'].str.strip().str.lower() == 'paid']
     df['DAY_OF_MONTH'] = df['APPLICATION DATE'].dt.day
     df['YEAR'] = df['APPLICATION DATE'].dt.year
     df['MONTH_NUM'] = df['APPLICATION DATE'].dt.month
