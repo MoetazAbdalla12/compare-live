@@ -1,36 +1,35 @@
+import os
 import pandas as pd
 import plotly.express as px
 from dash import Dash, dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 import calendar
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server  # ✅ this line is CRUCIAL
-gunicorn app:server
-
+# === Load & Prepare Data ===
 def load_and_prepare_data(filepath, label):
     df = pd.read_excel(filepath)
     df['APPLICATION DATE'] = pd.to_datetime(df['APPLICATION DATE'], errors='coerce')
-    df = df.dropna(subset=['APPLICATION DATE', 'REGION', 'Status'])
-    df = df[df['Status'].str.strip().str.lower() == 'paid']
+    df = df.dropna(subset=['APPLICATION DATE', 'REGION', 'STATUS'])
+    df = df[df['STATUS'].str.strip().str.lower() == 'paid']
     df['DAY_OF_MONTH'] = df['APPLICATION DATE'].dt.day
     df['YEAR'] = df['APPLICATION DATE'].dt.year
     df['MONTH_NUM'] = df['APPLICATION DATE'].dt.month
     df['SOURCE'] = label
     return df
 
-
-# Load your Excel files here (adjust paths as needed)
+# === Load Your Excel Files ===
 df_2024 = load_and_prepare_data('10.xlsx', '2024')
 df_2025 = load_and_prepare_data('univeristy - 24-6.xlsx', '2025')
 
 df_combined = pd.concat([df_2024, df_2025])
-
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
 regions = sorted(df_combined['REGION'].unique())
-months = [{'label': calendar.month_name[mn], 'value': mn} for mn in range(1, 13)]
+months = [{'label': calendar.month_name[m], 'value': m} for m in range(1, 13)]
 
+# === Dash App Init ===
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server  # ✅ Expose for Gunicorn
+
+# === Layout ===
 app.layout = dbc.Container([
     html.H2("📈 Compare Paid Applications by Day: 2024 vs 2025"),
     dbc.Row([
@@ -54,7 +53,7 @@ app.layout = dbc.Container([
     dcc.Graph(id='line-chart')
 ], fluid=True)
 
-
+# === Callback ===
 @app.callback(
     Output('line-chart', 'figure'),
     Input('region-filter', 'value'),
@@ -62,22 +61,31 @@ app.layout = dbc.Container([
 )
 def update_chart(selected_region, selected_month):
     dff = df_combined.copy()
-
+    
     if selected_region:
         dff = dff[dff['REGION'] == selected_region]
     if selected_month:
         dff = dff[dff['MONTH_NUM'] == selected_month]
+    else:
+        # Prevent crashing if no month selected
+        return px.line(title="Please select a month to display data.")
 
-    dff['YEAR_MONTH'] = dff.apply(lambda row: f"{calendar.month_name[row['MONTH_NUM']]} {row['YEAR']}", axis=1)
+    # Create 'Year Month' label for color
+    dff['YEAR_MONTH'] = dff.apply(
+        lambda row: f"{calendar.month_name[row['MONTH_NUM']]} {row['YEAR']}", axis=1
+    )
 
+    # Group and count
     daily_group = (
         dff.groupby(['DAY_OF_MONTH', 'YEAR_MONTH'])
         .size()
         .reset_index(name='TOTAL_PAID')
     )
 
-    max_days = calendar.monthrange(2024, selected_month if selected_month else 1)[1]
+    # Handle number of days for month (safe default for February)
+    max_days = calendar.monthrange(2024, selected_month)[1]
 
+    # Plotly Express Line Chart
     fig = px.line(
         daily_group,
         x='DAY_OF_MONTH',
@@ -89,7 +97,7 @@ def update_chart(selected_region, selected_month):
             'TOTAL_PAID': 'Total Paid Applications',
             'YEAR_MONTH': 'Year & Month'
         },
-        title=f"Daily Paid Applications Comparison by Day: {calendar.month_name[selected_month] if selected_month else 'All Months'}"
+        title=f"Daily Paid Applications Comparison: {calendar.month_name[selected_month]}"
     )
 
     fig.update_layout(
@@ -102,14 +110,12 @@ def update_chart(selected_region, selected_month):
         legend_title_text='Year and Month'
     )
 
-    # Save interactive chart as HTML
+    # Save a local interactive HTML
     fig.write_html("paid_applications_comparison.html", include_plotlyjs='cdn')
 
     return fig
 
-
+# === Run Server ===
 if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 8050))
-    app.run_server(host='0.0.0.0', port=port, debug=False)
-
+    port = int(os.environ.get("PORT", 8050))  # for Render dynamic port
+    app.run_server(debug=False, host='0.0.0.0', port=port)
