@@ -6,6 +6,7 @@ import calendar
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server  # ✅ this line is CRUCIAL
+gunicorn app:server
 
 def load_and_prepare_data(filepath, label):
     df = pd.read_excel(filepath)
