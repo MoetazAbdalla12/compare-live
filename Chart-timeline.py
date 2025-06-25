@@ -18,8 +18,8 @@ def load_and_prepare_data(filepath, label):
 
 
 # Load your Excel files here (adjust paths as needed)
-df_2024 = load_and_prepare_data('assets/10.xlsx', '2024')
-df_2025 = load_and_prepare_data('assets/univeristy - 24-6.xlsx', '2025')
+df_2024 = load_and_prepare_data('10.xlsx', '2024')
+df_2025 = load_and_prepare_data('univeristy - 24-6.xlsx', '2025')
 
 df_combined = pd.concat([df_2024, df_2025])
 
